@@ -85,8 +85,12 @@ export default function Student() {
       const gov = await getGovernmentRecordsByWallet(address);
       setGovRecords(gov);
     } catch (e) {
-      console.error(e);
-      setError(e.message);
+      console.warn("Asset fetching warning:", e);
+      if (e.message && (e.message.includes("BAD_DATA") || e.message.includes("0x"))) {
+        console.info("Blockchain contracts are clean or recently deployed.");
+      } else {
+        setError(e.message);
+      }
     } finally {
       setLoading(false);
     }

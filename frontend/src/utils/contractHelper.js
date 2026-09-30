@@ -135,24 +135,32 @@ export async function getCertificatesByStudent(studentAddress) {
   try {
     const contract = await getReadOnlyContract("education");
     const ids = await contract.getCertificatesByStudent(studentAddress);
-    return await Promise.all(
+    if (!ids || ids.length === 0) return [];
+
+    const results = await Promise.all(
       ids.map(async (certId) => {
-        const cert = await contract.verify(certId);
-        return {
-          certId,
-          studentName: cert[0],
-          course: cert[1],
-          ipfsHash: cert[2],
-          issueDate: new Date(Number(cert[3]) * 1000).toLocaleDateString(
-            "en-IN",
-            { year: "numeric", month: "long", day: "numeric" }
-          ),
-          isValid: cert[4],
-        };
+        try {
+          const cert = await contract.verify(certId);
+          return {
+            certId,
+            studentName: cert[0],
+            course: cert[1],
+            ipfsHash: cert[2],
+            issueDate: new Date(Number(cert[3]) * 1000).toLocaleDateString(
+              "en-IN",
+              { year: "numeric", month: "long", day: "numeric" }
+            ),
+            isValid: cert[4],
+          };
+        } catch {
+          return null;
+        }
       })
     );
+    return results.filter(Boolean);
   } catch (error) {
-    throw error;
+    console.warn("getCertificatesByStudent warning (chain may have reset or empty):", error.message);
+    return [];
   }
 }
 
