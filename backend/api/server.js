@@ -59,25 +59,34 @@ async function initBlockchain() {
     const rpcUrl =
       process.env.POLYGON_AMOY_RPC ||
       process.env.LOCAL_RPC ||
-      "http://127.0.0.1:8545";
+      "https://rpc-amoy.polygon.technology/";
     provider = new ethers.JsonRpcProvider(rpcUrl);
 
-    const constantsPath = path.resolve(
-      __dirname,
-      "../../frontend/src/config/constants.js"
-    );
-    const content = await fs.readFile(constantsPath, "utf-8");
-
-    // Extract CONTRACT_ADDRESSES
-    const addrMatch = content.match(/export const CONTRACT_ADDRESSES = (\{[\s\S]*?\});/);
-    if (addrMatch) {
-      contractAddresses = JSON.parse(addrMatch[1].replace(/'/g, '"'));
-    }
-
-    // Extract CONTRACT_ABIS
-    const abiMatch = content.match(/export const CONTRACT_ABIS = (\{[\s\S]*?\});/);
-    if (abiMatch) {
-      contractABIs = JSON.parse(abiMatch[1]);
+    // 1. Try local constants.json first (self-contained for cloud deployment)
+    const localConstantsPath = path.resolve(__dirname, "./constants.json");
+    try {
+      const raw = await fs.readFile(localConstantsPath, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (parsed.CONTRACT_ADDRESSES) contractAddresses = parsed.CONTRACT_ADDRESSES;
+      if (parsed.CONTRACT_ABIS) contractABIs = parsed.CONTRACT_ABIS;
+      console.log("🔗 Loaded contracts configuration from local constants.json");
+    } catch {
+      // 2. Fallback to frontend constants.js
+      const frontendPath = path.resolve(__dirname, "../../frontend/src/config/constants.js");
+      try {
+        const content = await fs.readFile(frontendPath, "utf-8");
+        const addrMatch = content.match(/export const CONTRACT_ADDRESSES = (\{[\s\S]*?\});/);
+        if (addrMatch) {
+          contractAddresses = new Function(`return (${addrMatch[1]})`)();
+        }
+        const abiMatch = content.match(/export const CONTRACT_ABIS = (\{[\s\S]*?\});/);
+        if (abiMatch) {
+          contractABIs = new Function(`return (${abiMatch[1]})`)();
+        }
+        console.log("🔗 Loaded contracts configuration from frontend constants.js");
+      } catch (feErr) {
+        console.warn("⚠️ Could not load frontend constants.js:", feErr.message);
+      }
     }
 
     console.log("🔗 Blockchain provider initialized with RPC:", rpcUrl);

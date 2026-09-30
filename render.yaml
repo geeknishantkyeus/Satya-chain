@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: satya-chain-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node api/server.js
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: POLYGON_AMOY_RPC
+        value: https://rpc-amoy.polygon.technology/
+      - key: PINATA_JWT
+        sync: false
