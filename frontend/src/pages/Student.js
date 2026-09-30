@@ -9,6 +9,13 @@ import {
   getGovernmentRecordsByWallet,
 } from "../utils/contractHelper";
 import { getIPFSUrl } from "../utils/ipfs";
+import {
+  generateEducationPDF,
+  generateGovernmentPDF,
+  generateLandPDF,
+  generateHealthcarePDF,
+  downloadPDF,
+} from "../utils/pdfGenerator";
 import CertificateCard from "../components/CertificateCard";
 import LandDeedCard from "../components/LandDeedCard";
 import HealthRecordCard from "../components/HealthRecordCard";
@@ -85,12 +92,71 @@ export default function Student() {
     }
   }
 
-  function handleDownload(cert) {
-    window.open(getIPFSUrl(cert.ipfsHash), "_blank");
+  async function handleDownload(cert) {
+    try {
+      const blob = await generateEducationPDF({
+        certId: cert.certId || cert.id,
+        studentName: cert.studentName || cert.holderName || "Student",
+        course: cert.course || "Degree Certificate",
+        university: cert.university || "Mumbai University",
+        issueDate: cert.issueDate,
+        ipfsHash: cert.ipfsHash,
+      });
+      downloadPDF(blob, `Certificate-${cert.certId || cert.id}.pdf`);
+    } catch (err) {
+      console.error("PDF generation error, opening IPFS URL:", err);
+      window.open(getIPFSUrl(cert.ipfsHash), "_blank");
+    }
   }
 
-  function handleViewIPFS(cert) {
-    window.open(getIPFSUrl(cert.ipfsHash), "_blank");
+  async function handleGovDownload(cred) {
+    try {
+      const blob = await generateGovernmentPDF({
+        id: cred.id,
+        idType: cred.idType,
+        holderName: cred.holderName,
+        issueDate: cred.issueDate,
+        ipfsHash: cred.ipfsHash,
+      });
+      downloadPDF(blob, `GovernmentID-${cred.id}.pdf`);
+    } catch (err) {
+      console.error("Government PDF error:", err);
+      window.open(getIPFSUrl(cred.ipfsHash), "_blank");
+    }
+  }
+
+  async function handleLandDownload(deed) {
+    try {
+      const blob = await generateLandPDF({
+        id: deed.tokenId,
+        deedType: "Land Title Deed",
+        ownerName: account,
+        propertyAddress: "Registered Parcel",
+        issueDate: new Date().toLocaleDateString("en-IN"),
+        ipfsHash: deed.uri,
+      });
+      downloadPDF(blob, `LandDeed-${deed.tokenId}.pdf`);
+    } catch (err) {
+      console.error("Land PDF error:", err);
+      window.open(getIPFSUrl(deed.uri), "_blank");
+    }
+  }
+
+  async function handleHealthDownload(rec) {
+    try {
+      const blob = await generateHealthcarePDF({
+        id: rec.tokenId,
+        recordType: "Medical Report",
+        patientName: account,
+        doctorName: "Authorized Physician",
+        issueDate: new Date().toLocaleDateString("en-IN"),
+        ipfsHash: rec.uri,
+      });
+      downloadPDF(blob, `HealthRecord-${rec.tokenId}.pdf`);
+    } catch (err) {
+      console.error("Health PDF error:", err);
+      window.open(getIPFSUrl(rec.uri), "_blank");
+    }
   }
 
   // Not connected
@@ -253,14 +319,13 @@ export default function Student() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {certs.map((cert, i) => (
               <div
-                key={cert.certId}
+                key={cert.certId || cert.id}
                 className="animate-slide-up"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
                 <CertificateCard
                   cert={cert}
                   onDownload={handleDownload}
-                  onViewIPFS={handleViewIPFS}
                 />
               </div>
             ))}
@@ -286,9 +351,7 @@ export default function Student() {
               >
                 <GovernmentCredentialCard
                   credential={cred}
-                  onViewIPFS={() =>
-                    window.open(getIPFSUrl(cred.ipfsHash), "_blank")
-                  }
+                  onDownload={handleGovDownload}
                 />
               </div>
             ))}
@@ -312,7 +375,10 @@ export default function Student() {
                 className="animate-slide-up"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                <LandDeedCard deed={deed} />
+                <LandDeedCard
+                  deed={deed}
+                  onDownload={handleLandDownload}
+                />
               </div>
             ))}
           </div>
@@ -335,7 +401,10 @@ export default function Student() {
                 className="animate-slide-up"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                <HealthRecordCard record={record} />
+                <HealthRecordCard
+                  record={record}
+                  onDownload={handleHealthDownload}
+                />
               </div>
             ))}
           </div>

@@ -6,8 +6,10 @@ import {
   revokeRecord,
 } from "../utils/contractHelper";
 import { getIPFSUrl } from "../utils/ipfs";
+import { generateSectorPDF, downloadPDF } from "../utils/pdfGenerator";
 import QRCodeModal from "../components/QRCodeModal";
 import QRScannerModal from "../components/QRScannerModal";
+import IPFSModal from "../components/IPFSModal";
 
 // ============================================
 // SECTOR CONFIG
@@ -85,6 +87,33 @@ export default function Verify() {
   const [revokeStatus, setRevokeStatus] = useState("");
   const [showQRModal, setShowQRModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
+  const [showIPFSModal, setShowIPFSModal] = useState(false);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+
+  async function handleDownloadPDF() {
+    if (!cert) return;
+    try {
+      setDownloadingPDF(true);
+      const blob = await generateSectorPDF(sector, {
+        certId: cert.id || searchId,
+        id: cert.id || searchId,
+        studentName: cert.holderName,
+        course: cert.type,
+        university: "Satya-Chain Verified University",
+        idType: cert.type,
+        doctorName: cert.doctorName,
+        propertyAddress: cert.propertyAddress,
+        issueDate: cert.issueDate,
+        ipfsHash: cert.ipfsHash,
+      });
+      downloadPDF(blob, `${sector.toUpperCase()}-${cert.id || searchId}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      window.open(getIPFSUrl(cert.ipfsHash), "_blank");
+    } finally {
+      setDownloadingPDF(false);
+    }
+  }
 
   // ============================================
   // Check admin status — on mount + wallet change
@@ -380,21 +409,28 @@ export default function Verify() {
             </div>
 
             <div className="pt-3 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <a
-                  href={getIPFSUrl(cert.ipfsHash)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-primary w-full text-center"
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleDownloadPDF}
+                  disabled={downloadingPDF}
+                  className="btn-primary w-full text-center py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  📄 View IPFS Doc
-                </a>
+                  <span>{downloadingPDF ? "⏳" : "📄"}</span> {downloadingPDF ? "Generating..." : "Download PDF"}
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowQRModal(true)}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border border-slate-700 shadow-sm transition"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-700 shadow-sm transition"
                 >
-                  📱 Share / View QR
+                  <span>📱</span> Share / QR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowIPFSModal(true)}
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-200 shadow-sm transition"
+                >
+                  <span>🔗</span> IPFS Proof
                 </button>
               </div>
 
@@ -447,13 +483,24 @@ export default function Verify() {
 
       {/* QR Code Modal for Verified Record */}
       {cert && (
-        <QRCodeModal
-          isOpen={showQRModal}
-          onClose={() => setShowQRModal(false)}
-          id={cert.id || searchId}
-          sector={sector}
-          title={cert.holderName || `${config.name} Credential`}
-        />
+        <>
+          <QRCodeModal
+            isOpen={showQRModal}
+            onClose={() => setShowQRModal(false)}
+            id={cert.id || searchId}
+            sector={sector}
+            title={cert.holderName || `${config.name} Credential`}
+          />
+          <IPFSModal
+            isOpen={showIPFSModal}
+            onClose={() => setShowIPFSModal(false)}
+            ipfsHash={cert.ipfsHash}
+            id={cert.id || searchId}
+            sector={sector}
+            title={`${cert.holderName || "Verified"} IPFS Proof`}
+            onDownload={handleDownloadPDF}
+          />
+        </>
       )}
 
       {/* QR Code Camera / Image Scanner Modal */}

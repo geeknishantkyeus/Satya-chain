@@ -5,9 +5,11 @@ import {
   checkHealthAccess,
 } from "../utils/contractHelper";
 import QRCodeModal from "./QRCodeModal";
+import IPFSModal from "./IPFSModal";
 
-export default function HealthRecordCard({ record }) {
+export default function HealthRecordCard({ record, onDownload, onViewIPFS }) {
   const [showQR, setShowQR] = useState(false);
+  const [showIPFS, setShowIPFS] = useState(false);
   const [doctorAddress, setDoctorAddress] = useState("");
   const [granting, setGranting] = useState(false);
   const [revoking, setRevoking] = useState(false);
@@ -142,22 +144,30 @@ export default function HealthRecordCard({ record }) {
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
+        {onDownload && (
+          <button
+            onClick={() => onDownload(record)}
+            className="flex-1 min-w-[90px] btn-primary text-xs py-2.5 font-bold flex items-center justify-center gap-1 shadow-sm"
+            title="Download Medical Record PDF"
+          >
+            <span>📄</span> Download
+          </button>
+        )}
         <button
           onClick={() => setShowQR(true)}
-          className="flex-1 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm py-2 font-medium transition flex items-center justify-center gap-1 border border-slate-700 shadow-sm"
+          className="flex-1 min-w-[90px] bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs py-2.5 font-bold transition flex items-center justify-center gap-1 border border-slate-700 shadow-sm"
           title="Show Verification QR Code"
         >
-          📱 QR Code
+          <span>📱</span> QR Code
         </button>
-        <a
-          href={`https://gateway.pinata.cloud/ipfs/${record.uri.replace("ipfs://", "")}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 btn-secondary text-sm py-2 text-center"
+        <button
+          onClick={() => (onViewIPFS ? onViewIPFS(record) : setShowIPFS(true))}
+          className="flex-1 min-w-[90px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs py-2.5 font-bold transition flex items-center justify-center gap-1 border border-slate-200 shadow-sm"
+          title="View IPFS Content & Gateways"
         >
-          🔗 View Metadata
-        </a>
+          <span>🔗</span> IPFS
+        </button>
       </div>
 
       <QRCodeModal
@@ -166,6 +176,16 @@ export default function HealthRecordCard({ record }) {
         id={record.tokenId}
         sector="healthcare"
         title={`Health Record #${record.tokenId}`}
+      />
+
+      <IPFSModal
+        isOpen={showIPFS}
+        onClose={() => setShowIPFS(false)}
+        ipfsHash={record.uri}
+        id={record.tokenId}
+        sector="healthcare"
+        title={`Health Record #${record.tokenId} IPFS Proof`}
+        onDownload={onDownload ? () => onDownload(record) : null}
       />
     </div>
   );

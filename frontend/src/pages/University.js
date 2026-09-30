@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   issueCertificate,
   issueGovernmentID,
@@ -14,6 +14,8 @@ import {
 } from "../utils/contractHelper";
 import { uploadToIPFS, uploadJSONToIPFS } from "../utils/ipfs";
 import { generateSectorPDF, downloadPDF } from "../utils/pdfGenerator";
+import QRCodeModal from "../components/QRCodeModal";
+import IPFSModal from "../components/IPFSModal";
 
 // ============================================
 // SECTOR CONFIG
@@ -94,6 +96,34 @@ export default function University() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: "", msg: "" });
   const [lastCert, setLastCert] = useState(null);
+  const [showQR, setShowQR] = useState(false);
+  const [showIPFS, setShowIPFS] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownloadLastCert() {
+    if (!lastCert) return;
+    try {
+      setDownloading(true);
+      const blob = await generateSectorPDF(lastCert.sector, {
+        certId: lastCert.certId,
+        id: lastCert.certId,
+        studentName: lastCert.studentName,
+        course: lastCert.course,
+        university: lastCert.university || "Mumbai University",
+        idType: lastCert.idType,
+        doctorName: lastCert.doctorName,
+        propertyAddress: lastCert.propertyAddress,
+        issueDate: new Date().toLocaleDateString("en-IN"),
+        ipfsHash: lastCert.ipfsHash,
+      });
+      downloadPDF(blob, `${lastCert.sector.toUpperCase()}-${lastCert.certId}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      alert("PDF generation failed: " + err.message);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   function updateField(key, value) {
     setForm({ ...form, [key]: value });
@@ -554,8 +584,62 @@ export default function University() {
                 )}
               </>
             )}
+
+            {/* Action Buttons for Last Issued Record */}
+            <div className="md:col-span-2 pt-3 border-t border-emerald-200/80 flex gap-2.5 flex-wrap">
+              <button
+                type="button"
+                onClick={handleDownloadLastCert}
+                disabled={downloading}
+                className="flex-1 min-w-[140px] btn-primary text-xs py-3 font-bold flex items-center justify-center gap-2 shadow-sm"
+              >
+                <span>{downloading ? "⏳" : "📄"}</span> {downloading ? "Generating PDF..." : "Download Official PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowQR(true)}
+                className="flex-1 min-w-[130px] bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs py-3 font-bold transition flex items-center justify-center gap-2 border border-slate-700 shadow-sm"
+              >
+                <span>📱</span> View QR Code
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowIPFS(true)}
+                className="flex-1 min-w-[130px] bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs py-3 font-bold transition flex items-center justify-center gap-2 border border-slate-200 shadow-sm"
+              >
+                <span>🔗</span> IPFS Proof
+              </button>
+              <Link
+                to={`/verify/${lastCert.certId}?sector=${lastCert.sector}`}
+                className="flex-1 min-w-[130px] bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs py-3 font-bold transition flex items-center justify-center gap-2 shadow-sm"
+              >
+                <span>🔍</span> Verify on Chain →
+              </Link>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Modals for Last Issued Record */}
+      {lastCert && (
+        <>
+          <QRCodeModal
+            isOpen={showQR}
+            onClose={() => setShowQR(false)}
+            id={lastCert.certId}
+            sector={lastCert.sector}
+            title={`${lastCert.studentName || "Issued"}'s ${config.name} Credential`}
+          />
+          <IPFSModal
+            isOpen={showIPFS}
+            onClose={() => setShowIPFS(false)}
+            ipfsHash={lastCert.ipfsHash}
+            id={lastCert.certId}
+            sector={lastCert.sector}
+            title={`${lastCert.studentName || "Record"} IPFS Proof`}
+            onDownload={handleDownloadLastCert}
+          />
+        </>
       )}
     </div>
   );

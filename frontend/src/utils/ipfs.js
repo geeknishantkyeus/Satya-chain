@@ -152,6 +152,7 @@ export async function uploadJSONToIPFS(jsonObject, fileName = "metadata.json") {
 
 export function getIPFSUrl(hash) {
   if (!hash) return "";
-  const cleanHash = hash.replace("ipfs://", "");
-  return `${GATEWAY}/${cleanHash}`;
+  const cleanHash = hash.replace("ipfs://", "").replace(/^\/+/, "");
+  const gateway = process.env.REACT_APP_PINATA_GATEWAY || "https://ipfs.io/ipfs";
+  return `${gateway.replace(/\/+$/, "")}/${cleanHash}`;
 }

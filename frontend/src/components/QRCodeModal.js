@@ -1,14 +1,16 @@
-import React, { useRef, useState } from "react";
-import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
+import React, { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import QRCode from "qrcode";
 
 export default function QRCodeModal({ isOpen, onClose, id, sector = "education", title }) {
   const [copied, setCopied] = useState(false);
-  const canvasRef = useRef(null);
+  const [downloading, setDownloading] = useState(false);
 
   if (!isOpen) return null;
 
   const origin = window.location.origin;
-  const verifyUrl = `${origin}/verify/${id}?sector=${sector}`;
+  const pathname = window.location.pathname.replace(/\/$/, "");
+  const verifyUrl = `${origin}${pathname}/#/verify/${id}?sector=${sector}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(verifyUrl);
@@ -16,16 +18,25 @@ export default function QRCodeModal({ isOpen, onClose, id, sector = "education",
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadPNG = () => {
-    const canvas = document.getElementById("satya-qr-canvas");
-    if (!canvas) return;
-    const pngUrl = canvas.toDataURL("image/png");
-    const downloadLink = document.createElement("a");
-    downloadLink.href = pngUrl;
-    downloadLink.download = `SatyaChain-QR-${id}.png`;
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
+  const handleDownloadPNG = async () => {
+    try {
+      setDownloading(true);
+      const pngUrl = await QRCode.toDataURL(verifyUrl, {
+        width: 800,
+        margin: 2,
+        color: { dark: "#0f172a", light: "#ffffff" },
+      });
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `SatyaChain-QR-${id}.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    } catch (err) {
+      console.error("QR PNG download error:", err);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -35,6 +46,7 @@ export default function QRCodeModal({ isOpen, onClose, id, sector = "education",
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition"
+          aria-label="Close"
         >
           ✕
         </button>
@@ -66,16 +78,12 @@ export default function QRCodeModal({ isOpen, onClose, id, sector = "education",
               excavate: true,
             }}
           />
-          {/* Hidden Canvas used for high-res PNG download */}
-          <div className="hidden">
-            <QRCodeCanvas
-              id="satya-qr-canvas"
-              value={verifyUrl}
-              size={600}
-              level="H"
-              includeMargin={true}
-            />
-          </div>
+        </div>
+
+        {/* Verification Link Preview */}
+        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 mb-5 text-[11px] text-slate-400 font-mono break-all text-left">
+          <span className="text-slate-500 block mb-0.5 font-sans font-bold">Verification Target:</span>
+          {verifyUrl}
         </div>
 
         {/* Scan instruction */}
@@ -84,12 +92,13 @@ export default function QRCodeModal({ isOpen, onClose, id, sector = "education",
         </p>
 
         {/* Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 mb-3">
           <button
             onClick={handleDownloadPNG}
-            className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+            disabled={downloading}
+            className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-slate-700 disabled:opacity-50"
           >
-            <span>💾</span> Download PNG
+            <span>{downloading ? "⏳" : "💾"}</span> {downloading ? "Saving..." : "Download PNG"}
           </button>
           <button
             onClick={handleCopyLink}
@@ -98,6 +107,16 @@ export default function QRCodeModal({ isOpen, onClose, id, sector = "education",
             <span>{copied ? "✓" : "📋"}</span> {copied ? "Copied!" : "Copy Link"}
           </button>
         </div>
+
+        {/* Direct Verify Hub Link */}
+        <a
+          href={verifyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-2.5 px-4 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 hover:border-transparent rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+        >
+          <span>🔍</span> Open in Verification Hub →
+        </a>
       </div>
     </div>
   );
