@@ -1,0 +1,55 @@
+# ==============================
+# Dependencies
+# ==============================
+**/node_modules/
+
+# ==============================
+# Environment variables / secrets
+# ==============================
+**/.env
+**/.env.*
+!**/.env.example
+
+# ==============================
+# Build output
+# ==============================
+**/dist/
+**/build/
+
+# ==============================
+# Hardhat generated files
+# ==============================
+backend/artifacts/
+backend/cache/
+backend/typechain-types/
+
+# ==============================
+# Logs
+# ==============================
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ==============================
+# OS files
+# ==============================
+.DS_Store
+Thumbs.db
+
+# ==============================
+# IDE / editor files
+# ==============================
+.vscode/
+.idea/
+
+# ==============================
+# Temporary files
+# ==============================
+*.tmp
+*.temp
+circom-src/
+backend/poseidon-2.wasm
+backend/poseidon-2.zkey
+backend/*.wasm
+backend/*.zkey
