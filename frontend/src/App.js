@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import StarField from "./components/StarField";
@@ -16,7 +16,7 @@ import Healthcare from "./pages/Healthcare";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="min-h-screen flex flex-col relative">
         <GlowOrbs />
         <StarField />
@@ -39,6 +39,6 @@ export default function App() {
           <Footer />
         </div>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
